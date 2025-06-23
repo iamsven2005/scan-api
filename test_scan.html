@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>SensitiveScan GUI</title>
+</head>
+<body>
+  <h1>SensitiveScan File Scanner</h1>
+
+  <!-- Token Management -->
+  <h2>Token Management</h2>
+
+  <button onclick="listTokens()">🔍 List Tokens</button>
+
+  <h4>Create New Token</h4>
+  <label for="desc">Description:</label>
+  <input type="text" id="desc">
+  <label for="days">Days Valid:</label>
+  <input type="number" id="days" value="30" min="1">
+  <button onclick="createToken()">Create Token</button>
+
+  <h4>Token List:</h4>
+  <pre id="tokenList"></pre>
+  <!-- API Token Input -->
+  <label for="token">API Token:</label>
+  <input type="text" id="apiToken" placeholder="Paste your API token here" style="width: 300px;">
+  <br><br>
+
+  <!-- File Upload -->
+  <form id="uploadForm" enctype="multipart/form-data">
+    <label for="file">Choose a file to scan:</label><br>
+    <input type="file" id="file" name="file" required><br><br>
+    <button type="submit">Upload and Scan</button>
+  </form>
+
+  <h3>Scan Response:</h3>
+  <pre id="scanResponse"></pre>
+
+  <hr>
+
+<!-- Semantic Search -->
+<h2>Semantic Search</h2>
+<form id="searchForm">
+  <label for="query">Enter search query:</label><br>
+  <input type="text" id="query" required style="width: 300px;">
+  <label for="topK">Top K results:</label>
+  <input type="number" id="topK" value="5" min="1" max="50">
+  <button type="submit">Search</button>
+</form>
+
+<h4>Search Results:</h4>
+<pre id="searchResults"></pre>
+
+<!-- Scan Sensitive Only -->
+<h2>Check Sensitive Only</h2>
+<form id="sensitiveForm" enctype="multipart/form-data">
+  <label for="sensitiveFile">Choose a file:</label><br>
+  <input type="file" id="sensitiveFile" name="file" required><br><br>
+  <button type="submit">Check Sensitivity</button>
+</form>
+
+<h4>Sensitivity Check Result:</h4>
+<pre id="sensitiveResponse"></pre>
+
+  <script>
+    const apiBase = 'http://localhost:8100';
+
+    // Scan File
+    document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const token = document.getElementById('apiToken').value.trim();
+      const fileInput = document.getElementById('file');
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+
+      try {
+        const response = await fetch(`${apiBase}/scan`, {
+          method: 'POST',
+          headers: {
+            'x-api-token': token
+          },
+          body: formData
+        });
+
+        const result = await response.json();
+        document.getElementById('scanResponse').textContent = JSON.stringify(result, null, 2);
+      } catch (error) {
+        document.getElementById('scanResponse').textContent = 'Error: ' + error;
+      }
+    });
+
+    // List Tokens
+    async function listTokens() {
+      try {
+        const response = await fetch(`${apiBase}/tokens`);
+        const tokens = await response.json();
+        document.getElementById('tokenList').textContent = JSON.stringify(tokens, null, 2);
+      } catch (err) {
+        document.getElementById('tokenList').textContent = 'Error fetching tokens: ' + err;
+      }
+    }
+
+    // Create Token
+    async function createToken() {
+      const desc = document.getElementById('desc').value.trim();
+      const days = parseInt(document.getElementById('days').value);
+
+      const payload = {
+        description: desc || null,
+        days_valid: isNaN(days) ? 30 : days
+      };
+      console.log(payload)
+      try {
+        const response = await fetch(`${apiBase}/tokens`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+        console.log(response)
+        const result = await response.json();
+        
+        alert('Token created:\n' + result.token);
+        listTokens();
+      } catch (err) {
+        alert('Error creating token: ' + err);
+      }
+    }
+
+    document.getElementById('searchForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const token = document.getElementById('apiToken').value.trim();
+  const query = document.getElementById('query').value.trim();
+  const topK = document.getElementById('topK').value;
+
+  if (!token) {
+    alert('API token required!');
+    return;
+  }
+
+  try {
+    const response = await fetch(`${apiBase}/search?query=${encodeURIComponent(query)}&top_k=${topK}`, {
+      headers: {
+        'x-api-token': token
+      }
+    });
+    const result = await response.json();
+    document.getElementById('searchResults').textContent = JSON.stringify(result, null, 2);
+  } catch (err) {
+    document.getElementById('searchResults').textContent = 'Error: ' + err;
+  }
+});
+
+document.getElementById('sensitiveForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const token = document.getElementById('apiToken').value.trim();
+  const fileInput = document.getElementById('sensitiveFile');
+
+  if (!token) {
+    alert('API token required!');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('file', fileInput.files[0]);
+
+  try {
+    const response = await fetch(`${apiBase}/scan/sensitive`, {
+      method: 'POST',
+      headers: {
+        'x-api-token': token
+      },
+      body: formData
+    });
+    const result = await response.json();
+    document.getElementById('sensitiveResponse').textContent = JSON.stringify(result, null, 2);
+  } catch (err) {
+    document.getElementById('sensitiveResponse').textContent = 'Error: ' + err;
+  }
+});
+
+  </script>
+</body>
+</html>

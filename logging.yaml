@@ -1,0 +1,13 @@
+version: 1
+formatters:
+  default:
+    format: "%(levelprefix)s %(asctime)s - %(message)s"
+handlers:
+  file:
+    class: logging.FileHandler
+    filename: /var/log/app/server.log
+    formatter: default
+    level: INFO
+root:
+  handlers: [file]
+  level: INFO
